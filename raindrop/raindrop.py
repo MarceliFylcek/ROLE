@@ -5,7 +5,7 @@ from PIL import Image
 import pyblur
 
 
-class raindrop():
+class Raindrop():
 	def __init__(self, key, centerxy = None, radius = None, input_alpha = None, input_label = None):
 		if input_label is None:
 			self.key = key		
@@ -75,7 +75,7 @@ class raindrop():
 		cv2.ellipse(self.labelmap, (self.radius * 2, self.radius * 3), (self.radius, int(1.3*math.sqrt(3) * self.radius)), 0, 180, 360, 128, -1)		
 		# set alpha map for png 
 		self.alphamap = pyblur.GaussianBlur(Image.fromarray(np.uint8(self.labelmap)), 10)
-		self.alphamap = np.asarray(self.alphamap).astype(np.float)
+		self.alphamap = np.asarray(self.alphamap).astype(float)
 		self.alphamap = self.alphamap/np.max(self.alphamap)*255.0
 		# set label map
 		self.labelmap[self.labelmap>0] = 1

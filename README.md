@@ -1,4 +1,21 @@
-# ROLE
+# ROLE fixes for Python 3.9
+
+## Enviroment
+* Python 3.9
+* requirements
+  * numpy
+  * cv2
+  * pillow
+  * scipy
+  * scikit-image
+  
+or directly use 
+```
+pip install -r requirement.txt
+```
+
+
+# ROLE (Originial README)
 Raindrop on lens effect
 
 

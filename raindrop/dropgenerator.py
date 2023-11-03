@@ -8,7 +8,7 @@ from PIL import Image
 from PIL import ImageEnhance
 from skimage.measure import label as skimage_label
 
-from raindrop import raindrop
+from .raindrop import Raindrop
 """
 This script generate the Drop on the images
 Author: Chia-Tse, Chang
@@ -51,7 +51,7 @@ def CheckCollision(DropList):
 				final_y = int(round(final_y/tmp_devide))
 				final_R = int(round(math.sqrt(final_R)))
 				# rebuild drop after handled the collisions
-				newDrop = raindrop(drop_key, (final_x, final_y), final_R)
+				newDrop = Raindrop(drop_key, (final_x, final_y), final_R)
 				drop_key = drop_key+1
 				listFinalDrops.append(newDrop)
 			# no collision
@@ -97,7 +97,7 @@ def generateDrops(imagePath, cfg, inputLabel = None):
 			# label should start from 1
 			key = key+1
 			radius = random.randint(minR, maxR)
-			drop = raindrop(key, pos, radius)
+			drop = Raindrop(key, pos, radius)
 			listRainDrops.append(drop)
 	#using input label			
 	else:
@@ -273,7 +273,7 @@ def generateDrops(imagePath, cfg, inputLabel = None):
 		
 		
 		output = drop.getTexture()		
-		tmp_output = np.asarray(output).astype(np.float)[:,:,-1]
+		tmp_output = np.asarray(output).astype(float)[:,:,-1]
 		tmp_alpha_map = tmp_alpha_map * (tmp_output/255)
 		tmp_alpha_map  = Image.fromarray(tmp_alpha_map.astype('uint8'))		
 		tmp_alpha_map.save("test.bmp")
