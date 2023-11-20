@@ -20,7 +20,7 @@ pip install -r requirement.txt
 ```
 
 
-# ROLE (Originial README)
+# ROLE (Original README)
 Raindrop on lens effect
 
 
