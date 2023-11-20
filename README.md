@@ -1,6 +1,8 @@
 # ROLE
 
 ![rain](https://github.com/MarceliFylcek/ROLE/assets/101202474/4f2a230f-2deb-4e2b-81dc-a99e95f84597)
+![ladybird](https://github.com/MarceliFylcek/ROLE/assets/101202474/0824c930-f559-4867-9808-0623853a24b1)
+
 
 
 ## Enviroment
