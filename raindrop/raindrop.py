@@ -4,10 +4,13 @@ import numpy as np
 from PIL import Image
 import pyblur
 import numpy as np
+import random
 
 
 class Raindrop:
-    def __init__(
+    """Raindrop creation
+    """    
+    def __init__(        
         self,
         key,
         centerxy=None,
@@ -16,17 +19,55 @@ class Raindrop:
         input_alpha=None,
         input_label=None,
     ):
+        """Initialize the raindrop
+
+        Radius can be predefined or sampled from a range.
+
+        Args:
+            key (int): Index given to a raindrop 
+            radius (_type_, optional): Predefined radius. Defaults to None.
+            radius_range (_type_, optional): Range to sample radius from. Defaults to None.
+            input_alpha (_type_, optional): _description_. Defaults to None.
+            input_label (_type_, optional): _description_. Defaults to None.
+        """        
+        
+        # No predefined label
         if input_label is None:
             self.key = key
+            # If collided with another drop
             self.ifcol = False
+            # List of drop it collided with
             self.col_with = []
+
+            # Center of the drop
             self.center = centerxy
-            self.radius = radius
             self.radius_range = radius_range
+
+            # Specified radius
+            if radius is not None:
+                self.radius = radius
+            # Random radius
+            else:
+                self.radius = random.randint(*self.radius_range)
+
+            # Shape of a drop dependent on size
+            range = self.radius_range[1] - self.radius_range[0]
+            radius_per = (self.radius - self.radius_range[0]) / range
+
+            self.vertical_radius = max(
+                (int(0.8 * radius_per * math.sqrt(3) * self.radius), self.radius)
+            )
+
+            self.vertical_radius = int(min(self.vertical_radius, self.radius * 2.4))
             self.type = "default"
             # label map's WxH = 4*R , 5*R
+
+            # Where the drop label is drawn to (canvas)
             self.labelmap = np.zeros((self.radius * 5, self.radius * 4))
+
+            # Blurred label
             self.alphamap = np.zeros((self.radius * 5, self.radius * 4))
+
             self.background = None
             self.texture = None
             self._create_label()
@@ -43,6 +84,7 @@ class Raindrop:
             # set the label center
             self.center = centerxy
             self.radius = min(w // 4, h // 4)
+            self.vertical_radius = int(1.3*math.sqrt(3) * self.radius)
             self.background = None
             self.texture = None
             self.use_label = True
@@ -52,8 +94,10 @@ class Raindrop:
         self.col_with = col_with
 
     def updateTexture(self, bg):
-        fg = pyblur.GaussianBlur(Image.fromarray(np.uint8(bg)), 5)
+        bg_img = Image.fromarray(np.uint8(bg))
+        fg = pyblur.GaussianBlur(bg_img, 5)
         fg = np.asarray(fg)
+
         # add fish eye effect to simulate the background
         K = np.array(
             [
@@ -69,8 +113,8 @@ class Raindrop:
 
         tmp = np.expand_dims(self.alphamap, axis=-1)
         tmp = np.concatenate((fisheye, tmp), axis=2)
-
         self.texture = Image.fromarray(tmp.astype("uint8"), "RGBA")
+        
         # most background in drop is flipped
         self.texture = self.texture.transpose(Image.FLIP_TOP_BOTTOM)
 
@@ -82,15 +126,9 @@ class Raindrop:
             self._createSplashDrop()
 
     def _createDefaultDrop(self):
+
         cv2.circle(
             self.labelmap, (self.radius * 2, self.radius * 3), self.radius, 128, -1
-        )
-        # Shape of a drop dependent on size
-        range = self.radius_range[1] - self.radius_range[0]
-        radius_per = (self.radius - self.radius_range[0]) / range
-
-        major_radius = max(
-            (int(0.73 * radius_per * math.sqrt(3) * self.radius), self.radius)
         )
 
         cv2.ellipse(
@@ -98,20 +136,22 @@ class Raindrop:
             (self.radius * 2, self.radius * 3),
             (
                 self.radius,
-                major_radius,
+                self.vertical_radius,
             ),
-            0,
-            180,
-            360,
-            128,
-            -1,
+            0,   # angle
+            180, # startAngle 
+            360, # endAngle
+            128, # color
+            -1,  # thickness
         )
         # set alpha map for png
+        #self.labelmap = self.labelmap.transpose(Image.FLIP_TOP_BOTTOM)
         self.alphamap = pyblur.GaussianBlur(
-            Image.fromarray(np.uint8(self.labelmap)), 10
-        )
+            Image.fromarray(np.uint8(self.labelmap)), 10)
+        
         self.alphamap = np.asarray(self.alphamap).astype(float)
         self.alphamap = self.alphamap / np.max(self.alphamap) * 255.0
+
         # set label map
         self.labelmap[self.labelmap > 0] = 1
 

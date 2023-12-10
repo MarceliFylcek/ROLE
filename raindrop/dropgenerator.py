@@ -17,7 +17,7 @@ Author: Chia-Tse, Chang
 """
 
 
-def CheckCollision(DropList, minR, maxR):
+def CheckCollision(DropList, minR, maxR, remove_collided):
     """
     This function handle the collision of the drops
     """
@@ -36,6 +36,12 @@ def CheckCollision(DropList, minR, maxR):
             if drop.getIfColli():
                 # get collision list
                 collision_list = drop.getCollisionList()
+
+                if remove_collided:
+                    for col_id in collision_list:
+                        Checked_list.append(col_id)    
+                    continue
+
                 # first get radius and center to decide how  will the collision do
                 final_x = drop.getCenters()[0] * drop.getRadius()
                 final_y = drop.getCenters()[1] * drop.getRadius()
@@ -88,6 +94,7 @@ def generateDrops(imagePath, cfg, inputLabel=None):
     new_height = cfg["new_height"]
     ifReturnLabel = cfg["return_label"]
     edge_ratio = cfg["edge_darkratio"]
+    remove_collided = cfg["remove_collided"]
 
     PIL_bg_img = Image.open(imagePath)
 
@@ -96,10 +103,12 @@ def generateDrops(imagePath, cfg, inputLabel=None):
         width, height = PIL_bg_img.size
         PIL_bg_img = PIL_bg_img.resize((int(width * new_height / height), new_height))
 
+    # Input image
     bg_img = np.asarray(PIL_bg_img)
 
     # to check if collision or not
     label_map = np.zeros_like(bg_img)[:, :, 0]
+
     imgh, imgw, _ = bg_img.shape
 
     # random drops position
@@ -112,15 +121,21 @@ def generateDrops(imagePath, cfg, inputLabel=None):
     #########################
     # Create Raindrop
     #########################
-    # create raindrop by default
+
+    # No input label
     if inputLabel is None:
         for key, pos in enumerate(ran_pos):
+
             # label should start from 1
             key = key + 1
+
+            # Radius will be sampled from this range
             radius_range = (minR, maxR)
-            radius = random.randint(minR, maxR)
-            drop = Raindrop(key, pos, radius, radius_range)
+
+            # Shape is dependent on random radius
+            drop = Raindrop(key, pos, radius_range=radius_range)
             listRainDrops.append(drop)
+
     # using input label
     else:
         arrayLabel = np.asarray(inputLabel)
@@ -160,19 +175,26 @@ def generateDrops(imagePath, cfg, inputLabel=None):
     # only check when using default raindrop
     if inputLabel is None:
         while collisionNum > 0:
+
             loop = loop + 1
             listFinalDrops = list(listFinalDrops)
             collisionNum = len(listFinalDrops)
+
+            # Label map for entire input image
             label_map = np.zeros_like(label_map)
+
             # Check Collision
             for drop in listFinalDrops:
+
                 # check the bounding
                 (ix, iy) = drop.getCenters()
                 radius = drop.getRadius()
+                
                 ROI_WL = 2 * radius
                 ROI_WR = 2 * radius
                 ROI_HU = 3 * radius
                 ROI_HD = 2 * radius
+
                 if (iy - 3 * radius) < 0:
                     ROI_HU = iy
                 if (iy + 2 * radius) > imgh:
@@ -185,8 +207,26 @@ def generateDrops(imagePath, cfg, inputLabel=None):
                 # apply raindrop label map to Image's label map
                 drop_label = drop.getLabelMap()
 
+                criterion1 = label_map[iy, ix] > 0
+                if iy + 2*radius < imgh:
+                    criterion2 = label_map[iy + 2*radius, ix] > 0
+                else:
+                    criterion2 = False
+                if iy - 3*radius > 0:
+                    criterion3 = label_map[iy - 3*radius, ix] > 0
+                else:
+                    criterion3 = False
+                if ix + 2*radius < imgw:
+                    criterion4 = label_map[iy, ix + 2*radius] > 0
+                else:
+                    criterion4 = False
+                if ix - 2*radius > 0: 
+                    criterion5 = label_map[iy, ix - 2*radius] > 0
+                else:
+                    criterion5 = False
+
                 # check if center has already has drops
-                if label_map[iy, ix] > 0:
+                if (criterion1 or criterion2 or criterion3 or criterion4 or criterion5):
                     col_ids = np.unique(
                         label_map[iy - ROI_HU : iy + ROI_HD, ix - ROI_WL : ix + ROI_WR]
                     )
@@ -196,8 +236,7 @@ def generateDrops(imagePath, cfg, inputLabel=None):
                         drop_label[
                             3 * radius - ROI_HU : 3 * radius + ROI_HD,
                             2 * radius - ROI_WL : 2 * radius + ROI_WR,
-                        ]
-                        * drop.getKey()
+                        ] * drop.getKey()
                     )
                 else:
                     label_map[iy - ROI_HU : iy + ROI_HD, ix - ROI_WL : ix + ROI_WR] = (
@@ -211,7 +250,7 @@ def generateDrops(imagePath, cfg, inputLabel=None):
                     collisionNum = collisionNum - 1
 
             if collisionNum > 0:
-                listFinalDrops = CheckCollision(listFinalDrops, minR, maxR)
+                listFinalDrops = CheckCollision(listFinalDrops, minR, maxR, remove_collided)
 
     # add alpha for the edge of the drops
     alpha_map = np.zeros_like(label_map).astype(np.float64)
@@ -296,8 +335,9 @@ def generateDrops(imagePath, cfg, inputLabel=None):
         drop.updateTexture(tmp_bg)
         tmp_alpha_map = alpha_map[ROIU:ROID, ROIL:ROIR]
 
+        # Binary mask
         output = drop.getTexture()
-        tmp_output = np.asarray(output).astype(float)[:, :, -1]
+        tmp_output = np.asarray(output).astype(float)[:, :, -1] 
         tmp_alpha_map = tmp_alpha_map * (tmp_output / 255)
         tmp_alpha_map = Image.fromarray(tmp_alpha_map.astype("uint8"))
         tmp_alpha_map.save("test.bmp")
@@ -311,6 +351,38 @@ def generateDrops(imagePath, cfg, inputLabel=None):
         else:
             PIL_bg_img.paste(edge, (ix, iy), tmp_alpha_map)
             PIL_bg_img.paste(output, (ix, iy), output)
+
+    #
+    # New alpha map
+    #
+
+    alpha_map = np.zeros_like(label_map).astype(np.float64)
+
+    if inputLabel is None:
+        for drop in listFinalDrops:
+            (ix, iy) = drop.getCenters()
+            radius = drop.getRadius()
+            ROI_WL = 2 * radius
+            ROI_WR = 2 * radius
+            ROI_HU = 3 * radius
+            ROI_HD = 2 * radius
+            if (iy - 3 * radius) < 0:
+                ROI_HU = iy
+            if (iy + 2 * radius) > imgh:
+                ROI_HD = imgh - iy
+            if (ix - 2 * radius) < 0:
+                ROI_WL = ix
+            if (ix + 2 * radius) > imgw:
+                ROI_WR = imgw - ix
+
+            drop_alpha = np.flipud(drop.getAlphaMap())
+
+            alpha_map[
+                iy - ROI_HU : iy + ROI_HD, ix - ROI_WL : ix + ROI_WR
+            ] += drop_alpha[
+                3 * radius - ROI_HU : 3 * radius + ROI_HD,
+                2 * radius - ROI_WL : 2 * radius + ROI_WR,
+            ]
 
     if ifReturnLabel:
         output_label = np.array(alpha_map)
