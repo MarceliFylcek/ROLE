@@ -95,6 +95,7 @@ def generateDrops(imagePath, cfg, inputLabel=None):
     ifReturnLabel = cfg["return_label"]
     edge_ratio = cfg["edge_darkratio"]
     remove_collided = cfg["remove_collided"]
+    return_height = cfg["return_height"]
 
     PIL_bg_img = Image.open(imagePath)
 
@@ -389,6 +390,14 @@ def generateDrops(imagePath, cfg, inputLabel=None):
         output_label.flags.writeable = True
         output_label[output_label > 0] = 1
         output_label = Image.fromarray(output_label.astype("uint8"))
+
+        # Resize
+        width, height = PIL_bg_img.size
+        PIL_bg_img = PIL_bg_img.resize((int(width * return_height / height), return_height))
+
+        width, height = output_label.size
+        output_label = output_label.resize((int(width * return_height / height), return_height))
+
         return PIL_bg_img, output_label
 
     return PIL_bg_img

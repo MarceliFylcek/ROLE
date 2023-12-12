@@ -1,5 +1,5 @@
 cfg = {
-    "maxR": 60,
+    "maxR": 55,
     "minR": 40,
     "maxDrops": 50,
     "minDrops": 30,
@@ -8,5 +8,6 @@ cfg = {
     "label_thres": 128,
     "resize": True,
     "new_height": 2200,
-    "remove_collided" : False # Removes collided drops
+    "remove_collided" : False, # Removes collided drops
+    "return_height" : 512
 }
