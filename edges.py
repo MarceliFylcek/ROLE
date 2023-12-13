@@ -1,21 +1,30 @@
 import cv2
+import numpy as np
 
-img = cv2.imread("00001.png")
+def add_mask_edges(mask, edges):
+	contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+	cv2.drawContours(edges, contours, -1, (255), thickness=1)
 
-if img is not None:
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+teeth_mask = "masks/00001.png"
+drop_mask = "Output_label/00001.png"
 
-    # Apply Gaussian blur before Sobel edge detection
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+binary_mask_drop = cv2.imread(drop_mask, cv2.IMREAD_GRAYSCALE)
+binary_mask_drop = cv2.convertScaleAbs(binary_mask_drop)
 
-    # Sobel edge detection
-    sobel_x = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=5)
-    sobel_y = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=5)
-    edges = cv2.magnitude(sobel_x, sobel_y)
-    edges = cv2.convertScaleAbs(edges)
-    threshold_value = 250  # Adjust this threshold value
-    ret, thresholded = cv2.threshold(edges, threshold_value, 255, cv2.THRESH_BINARY)
-    cv2.imshow("Thresholded", thresholded)
-    cv2.waitKey(0)
-else:
-    print("Image not found or could not be read.")
+binary_mask_teeth = cv2.imread(teeth_mask, cv2.IMREAD_GRAYSCALE)
+binary_mask_teeth = cv2.convertScaleAbs(binary_mask_teeth)
+
+width = binary_mask_drop.shape[1]
+height = binary_mask_drop.shape[0]
+dim = (width, height)
+
+binary_mask_teeth = cv2.resize(binary_mask_teeth, dim, interpolation = cv2.INTER_AREA)
+
+edges = np.zeros_like(binary_mask_teeth)
+
+add_mask_edges(binary_mask_teeth, edges)
+add_mask_edges(binary_mask_drop, edges)
+
+cv2.imshow('Edges', edges)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
